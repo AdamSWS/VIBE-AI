@@ -1,7 +1,5 @@
 # YouTube Data API Project
 
-This project retrieves video data, statistics, and comments from YouTube using the YouTube Data API v3.
-
 ## Prerequisites
 
 - Python 3.x installed on your system
