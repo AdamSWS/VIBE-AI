@@ -4,25 +4,14 @@ from deep_translator import GoogleTranslator
 translator = GoogleTranslator(source='auto', target='en')
 
 def load_keywords(filepath='./data/keywords.txt'):
-    """
-    Loads keywords and phrases from a file, where each line represents a single keyword or phrase.
-    Returns a set for faster lookup.
-    """
     with open(filepath, 'r') as file:
-        keywords = {line.strip().lower() for line in file if line.strip()}  # Avoid empty lines
+        keywords = {line.strip().lower() for line in file if line.strip()} 
     return keywords
 
 def normalize(value, max_value):
-    """Normalizes a value to the range 0–1 based on the maximum observed value."""
     return value / max_value if max_value else 0
 
 def calculate_adjusted_score(comments, keywords, weights, threshold):
-    """
-    Optimized function to calculate scores for YouTube comments based on likes, length, and keyword matches.
-    Translates non-English comments to English for consistent keyword matching.
-    Ignores comments with fewer than 4 words.
-    Uses sets for faster keyword matching and a dictionary cache for processed comments.
-    """
     labeled_comments = []
     comments_cache = {}
 
