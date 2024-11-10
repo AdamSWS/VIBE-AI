@@ -9,7 +9,8 @@ from google_trends import get_randomized_youtube_trending_topics
 # Load environment variables
 load_dotenv()
 
-# Check if API key is loaded
+# If you don't have one create a Google Developer account and go to this link and
+# click Try This API: https://console.cloud.google.com/marketplace/product/google/youtube.googleapis.com?project=data-mining-440319
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 print(f"[DEBUG] Loaded API_KEY: {'set' if API_KEY else 'not set'}")
 
@@ -17,6 +18,7 @@ if not API_KEY:
     print("[ERROR] API_KEY is not set. Ensure your .env file has the correct key and is loaded.")
     exit(1)
 
+# Make sure quota is not exceeded
 def check_api_quota():
     url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&maxResults=1&key={API_KEY}"
     response = requests.get(url)
