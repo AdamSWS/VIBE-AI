@@ -1,4 +1,5 @@
 from deep_translator import GoogleTranslator
+from langdetect import detect
 
 # Initialize the Translator
 translator = GoogleTranslator(source='auto', target='en')
@@ -16,7 +17,7 @@ def calculate_adjusted_score(comments, keywords, weights, threshold):
     comments_cache = {}
 
     # Calculate the max likes for normalization
-    max_likes = max((comment.like_count for comment in comments), default=1)
+    max_likes = max((comment['like_count'] for comment in comments), default=1)
 
     # Scaling factors to reduce the chance of scores approaching 1
     likes_scaling_factor = 0.3
@@ -24,32 +25,41 @@ def calculate_adjusted_score(comments, keywords, weights, threshold):
 
     # Process each comment
     for comment in comments:
-        # Skip comments with fewer than 4 words
-        original_text = comment.text
-        word_count = len(original_text.split())
-        if word_count < 4:
-            print(f"Skipping comment ID: {comment.comment_id} (fewer than 4 words)")
+        original_text = comment['text'].strip()
+
+        # Check if the comment is non-empty and has substantial content
+        if len(original_text.split()) < 4 or not any(char.isalnum() for char in original_text):
+            print(f"Skipping comment ID: {comment['comment_id']} (No substantial content)")
             continue
 
         # Check if comment has already been processed and cached
-        if comment.comment_id in comments_cache:
-            labeled_comments.append(comments_cache[comment.comment_id])
+        if comment['comment_id'] in comments_cache:
+            labeled_comments.append(comments_cache[comment['comment_id']])
             continue
 
-        # Attempt translation, fallback to original text if translation fails
+        # Detect the language of the original comment
         try:
-            translated_text = translator.translate(original_text).lower()
-            if translated_text is None:
-                raise ValueError("Translation returned None")
+            detected_language = detect(original_text)
+            print(f"[DEBUG] Detected language for comment ID {comment['comment_id']}: {detected_language}")
         except Exception as e:
-            print(f"Translation failed for comment {comment.comment_id}: {e}")
-            translated_text = original_text.lower()
+            print(f"[ERROR] Language detection failed for comment ID {comment['comment_id']}: {e}")
+            detected_language = 'unknown'
+
+        # Proceed with translation only if the detected language is not English
+        if detected_language != 'en' and detected_language != 'unknown':
+            try:
+                translated_text = translator.translate(original_text)
+            except Exception as e:
+                print(f"Translation failed for comment ID {comment['comment_id']}: {e}")
+                translated_text = original_text
+        else:
+            translated_text = original_text
 
         # Normalize likes with a scaling factor
-        normalized_likes = (comment.like_count / max_likes) * likes_scaling_factor if max_likes > 0 else 0
+        normalized_likes = (comment['like_count'] / max_likes) * likes_scaling_factor if max_likes > 0 else 0
 
         # Find matching keywords using set intersection for speed
-        matched_keywords = [word for word in keywords if word in translated_text]
+        matched_keywords = [word for word in keywords if word in translated_text.lower()]
         keyword_count = len(matched_keywords)
         keyword_score = keyword_count * keyword_scaling_factor
 
@@ -64,11 +74,15 @@ def calculate_adjusted_score(comments, keywords, weights, threshold):
 
         # Prepare the labeled comment data
         labeled_comment = {
-            'text': comment['text'],
-            'likes': comment['likes'],
+            'text': original_text,
+            'likes': comment['like_count'],
+            'label': label,
+            'score': final_score,
+            'matched_keywords': matched_keywords
         }
 
         # Cache the result to avoid reprocessing
-        comments_cache[comment.comment_id] = labeled_comment
+        comments_cache[comment['comment_id']] = labeled_comment
+        labeled_comments.append(labeled_comment)
 
     return labeled_comments

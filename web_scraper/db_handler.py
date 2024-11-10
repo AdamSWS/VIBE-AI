@@ -1,18 +1,20 @@
-from db_conn import get_db_client
-
-def push_to_database(video_data):
-    # Inserts video data, including comments, into the MongoDB database.
-    db = get_db_client()
+def save_comments_batch(comments_batch, video_title, db):
+    if not comments_batch:
+        print("[DEBUG] No comments to save.")
+        return
+    
     collection = db['comments']
     
-    # Insert video title and comments as a new document
     document = {
-        "title": video_data["title"],
-        "comments": video_data["comments"]
+        "title": video_title,
+        "comments": comments_batch
     }
-    
+
     try:
-        collection.insert_one(document)
-        print(f"[INFO] Successfully saved video '{video_data['title']}' and its comments to MongoDB.")
+        result = collection.insert_one(document)
+        if result.inserted_id:
+            print(f"[INFO] Successfully saved {len(comments_batch)} comments for video '{video_title}' to MongoDB with ID: {result.inserted_id}")
+        else:
+            print("[ERROR] Document batch insertion failed without an exception.")
     except Exception as e:
-        print(f"[ERROR] Failed to save data to MongoDB: {e}")
+        print(f"[ERROR] Failed to save comments to MongoDB: {e}")
