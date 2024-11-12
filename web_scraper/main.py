@@ -51,14 +51,18 @@ def main():
                         if USE_API_FOR_COMMENTS and not check_api_quota():
                             return
                 else:
-                    video_data = scrape_video_data_from_search(topic)
-                    if video_data:
-                        video_title = video_data['title']
-                        comments = video_data['comments']
-                        if comments:
-                            save_comments_batch(comments, video_title, db)
-                        else:
-                            print("[WARNING] No valid video title or comments found.")
+                    try: 
+                        video_data = scrape_video_data_from_search(topic)
+                        if video_data:
+                            video_title = video_data['title']
+                            comments = video_data['comments']
+                            if comments:
+                                save_comments_batch(comments, video_title, db)
+                            else:
+                                print("[WARNING] No valid video title or comments found.")
+                    except Exception as e:
+                        print("[ERROR] No data has been scraped:", e)
+                        return
                 # Wait to avoid rate-limiting
                 time.sleep(1)
 

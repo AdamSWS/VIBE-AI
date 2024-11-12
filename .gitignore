@@ -1,6 +1,5 @@
-.ipynb_checkpoints/
-.venv/
-.vscode/
-webdrivers/chromedriver.exe
-*.log
 .env
+driver/chromedriver
+web_scraper/__pycache__/
+web_scraper/driver/chromedriver
+web_scraper/driver/chromedriver.exe
