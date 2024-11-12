@@ -9,3 +9,4 @@ langdetect==1.0.9
 chromedriver-autoinstaller==0.6.4
 dnspython==2.7.0
 pandas==2.0.1
+numpy==1.24.3
