@@ -1,3 +1,9 @@
+"""
+This file connects to a MongoDB database and inserts items into a collection,
+using a hash to prevent duplicates. It retrieves database credentials from
+environment variables.
+"""
+
 import os
 import hashlib
 from pymongo import MongoClient

@@ -1,3 +1,8 @@
+"""
+This file automates the scraping of YouTube video metadata, including title,
+description, tags, upload date, view count, and likes, using Selenium WebDriver.
+"""
+
 from concurrent.futures import ThreadPoolExecutor
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait

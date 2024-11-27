@@ -1,3 +1,10 @@
+"""
+This file uses the PyTrends API to fetch trending topics for specified regions
+and categories, filtering and randomizing the results for YouTube-related 
+trends. It provides functions to retrieve regions, filter previously seen 
+topics, fetch regional trends, and generate random topics from predefined categories.
+"""
+
 import random
 from pytrends.request import TrendReq
 

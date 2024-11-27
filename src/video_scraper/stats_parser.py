@@ -1,3 +1,9 @@
+"""
+This file contains utility functions for parsing and converting numerical
+strings related to likes, view counts, and other formatted numbers into 
+integers.
+"""
+
 def parse_likes(likes_string):
     try:
         # Ensure the input is a string

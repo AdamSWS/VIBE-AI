@@ -1,3 +1,8 @@
+"""
+This file manages VPN connections using AppleScript to control the ProtonVPN
+application on macOS.
+"""
+
 import subprocess
 import time
 

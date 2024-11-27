@@ -1,3 +1,9 @@
+"""
+This file manages YouTube video scraping, including VPN connections, topic 
+processing, and storing results in MongoDB. It supports batch processing
+from a CSV file and provides an interactive menu for user actions.
+"""
+
 import time
 import os
 import json

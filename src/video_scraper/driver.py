@@ -1,3 +1,9 @@
+"""
+This file initializes a Selenium WebDriver for web scraping tasks like parsing
+YouTube comments. It configures the ChromeDriver with options to disable 
+unnecessary features, handle permissions, and support headless operation.
+"""
+
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service

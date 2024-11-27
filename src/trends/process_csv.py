@@ -1,3 +1,9 @@
+"""
+This file extracts trending topics from a CSV file, defaulting to a predefined
+file path if none is provided. It reads the CSV, processes the first column of
+each row, and returns the extracted trends.
+"""
+
 import csv
 import os
 
