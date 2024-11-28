@@ -2,12 +2,51 @@ from concurrent.futures import ThreadPoolExecutor
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from .driver import create_driver
+from scraper import create_driver, parse_likes, parse_view_count
 from queue import Queue
 from threading import Lock
-from .stats_parser import parse_likes, parse_view_count
+from trends import get_randomized_youtube_trending_topics
+from vpn import connect_to_vpn, disconnect_vpn
+from db import get_db, store_items_to_collection
 
 MAX_VIDEOS = 35
+
+def start_scraping_session(threads=7, topics=None):
+    if threads:
+        print(f"[INFO] Starting scraping session with {threads} thread(s)...")
+    else:
+        print("[INFO] Starting scraping session without multithreading...")
+
+    if not topics:
+        print("[INFO] No topics provided. Fetching trending topics...")
+        topics = get_randomized_youtube_trending_topics()
+
+    print(f"[INFO] Fetched Topics: {topics}")
+
+    all_results = []
+    connect_to_vpn()
+
+    for topic in topics:
+        print(f"[INFO] Scraping videos for topic: {topic}")
+        try:
+            topic_results = scrape_trending_videos(topic, threads)
+            all_results.extend(topic_results)
+        except Exception as e:
+            print(f"[ERROR] Failed to scrape videos for topic '{topic}': {e}")
+
+    disconnect_vpn()
+
+    if all_results:
+        try:
+            collection = get_db("trending_video_data")
+            store_items_to_collection(collection, all_results)
+            print(f"[INFO] Scraped data successfully stored in MongoDB. Total videos: {len(all_results)}")
+        except Exception as e:
+            print(f"[ERROR] Failed to store data in MongoDB: {e}")
+    else:
+        print("[WARNING] No results to store.")
+
+    return all_results
 
 
 def scrape_video_details(video_url):

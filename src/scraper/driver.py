@@ -7,7 +7,7 @@ import subprocess
 def create_driver():
     try:
         options = Options()
-        options.add_argument("--headless=new")
+        # options.add_argument("--headless=new")
         options.add_argument("--incognito")
         options.add_argument("--disable-web-security")
         options.add_argument("--disable-extensions")
@@ -23,7 +23,7 @@ def create_driver():
         options.add_argument(f"user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
 
         # Verify and configure the ChromeDriver path
-        driver_path = os.path.abspath("./src/video_scraper/driver/chromedriver")
+        driver_path = os.path.abspath("./src/scraper/driver/chromedriver")
         print(f"[DEBUG] Driver Path: {driver_path}")
         if not os.access(driver_path, os.X_OK):
             subprocess.run(["chmod", "+x", driver_path], check=True)
