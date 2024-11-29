@@ -13,7 +13,7 @@ mongo_uri = f"mongodb+srv://{username}:{password}@{host}/{database_name}?retryWr
 def get_db(collection_name):
     try:
         client = MongoClient(mongo_uri)
-        db = client['youtube_statistics']
+        db = client['youtube_comments']
         collection = db[collection_name]
         return collection, client
     except Exception as e:
@@ -55,3 +55,38 @@ def store_items_to_collection(collection_tuple_or_object, items):
     except Exception as e:
         print(f"[ERROR] Failed to insert items into collection: {e}")
         raise
+
+def save_comments_batch(comments_batch, video_title, db=None):
+    """
+    Save a batch of comments with the video title to the MongoDB database.
+
+    Parameters:
+        comments_batch (list): List of comments to save.
+        video_title (str): The title of the video.
+    """
+    if not comments_batch:
+        print("[DEBUG] No comments to save.")
+        return
+
+    try:
+        # Get the collection and database connection
+        collection, client = get_db("tech_comments")
+        
+        # Prepare the document for insertion
+        document = {
+            "title": video_title,
+            "comments": comments_batch
+        }
+
+        # Attempt to insert into the collection
+        result = collection.insert_one(document)
+        if result.inserted_id:
+            print(f"[INFO] Successfully saved {len(comments_batch)} comments for video '{video_title}' to MongoDB with ID: {result.inserted_id}")
+        else:
+            print("[ERROR] Document batch insertion failed without an exception.")
+    except Exception as e:
+        print(f"[ERROR] Failed to save comments to MongoDB: {e}")
+    finally:
+        # Close the MongoDB client connection
+        if 'client' in locals():
+            client.close()

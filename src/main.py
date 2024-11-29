@@ -1,5 +1,5 @@
 from vpn import connect_to_vpn, disconnect_vpn
-from trends import get_randomized_youtube_trending_topics, process_csv_in_loop
+from trends import get_randomized_youtube_trending_topics, process_csv_in_loop, process_csv_in_loop_for_comments
 from scraper import start_scraping_session, start_comment_scrape_session
 
 def display_menu():
@@ -67,9 +67,10 @@ def main():
             process_csv_in_loop(csv_file, batch_size=batch_size, interval=interval)
 
         elif choice == "5":
+            csv_file = input("[INPUT] Enter the path to the CSV file: ").strip()
+            batch_size = int(input("[INPUT] Enter the number of topics to process at a time: ").strip())
             print("[INFO] Do you want to enable multithreading for the scraping session?")
             threading_choice = input("[INPUT] Enter 'yes' to enable, or 'no' to disable: ").strip().lower()
-
             if threading_choice == "yes":
                 while True:
                     num_threads_input = input("[INPUT] Enter the number of threads to use: ").strip()
@@ -80,11 +81,12 @@ def main():
                         print("[ERROR] Please enter a valid number greater than 0.")
             else:
                 num_threads = None
-
-            print("[INFO] Starting Single Mode...")
-            topics = get_randomized_youtube_trending_topics()
-            print(f"[INFO] Topics to scrape: {topics}")
-            trending_video_stats = start_comment_scrape_session(threads=num_threads, topics=topics)
+            interval = int(input("[INPUT] Enter the interval (in seconds) between batches: ").strip())
+            process_csv_in_loop_for_comments(csv_file, batch_size=batch_size, interval=interval)
+            # print("[INFO] Starting Single Mode...")
+            # topics = get_randomized_youtube_trending_topics()
+            # print(f"[INFO] Topics to scrape: {topics}")
+            # trending_video_stats = start_comment_scrape_session(threads=num_threads, topics=topics)
 
             if trending_video_stats:
                 print("[INFO] Scraped Video Details:")
