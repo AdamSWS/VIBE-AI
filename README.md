@@ -1,22 +1,36 @@
-# YouTube Data API Project
+# VIBE AI - Video Recommending AI System
+
+This repository contains the tools, developer notes, and other items used to collect and analyize our data to fine tune GPT-2 with. To run any of the code, follow the setup
 
 ## Prerequisites
 
 - Python 3.x installed on your system
 - A Google account for accessing the Google Cloud Platform
+- A download of ProtonVPN (As of right now, the vpn connection script is built for Macs)
+- 
 
 ## Installation
 
 1. **Clone the repository** (or download the code):
    ```bash
-   git clone git@github.com:AdamSWS/Youtube-Comment-Gathering.git
-   cd Youtube-Comment-Gathering
+   git clone https://github.com/AdamSWS/VIBE-AI.git
+   cd VIBE-AI
 
-2. Install the required Python packages: Run the following command to install dependencies from requirements.txt:
-    ```bash
-    pip install -r requirements.txt
+2. **Create the Virtual Environment**
+      python -m venv .venv
 
-## How to Create a Google Developer Account and Get a YouTube Data API v3 Key
+3. **Activate the Virtual Environment**
+   - On Windows (Command Prompt)
+      .venv\Scripts\activate
+   - On Windows (Power Shell)
+      .\.venv\Scripts\Activate.ps1
+   - On macOS/Linux
+      source .venv/bin/activate
+
+4. **Install Dependencies**
+   - pip install -r requirements.txt
+
+## How to Create a Google Developer Account and Get a YouTube Data API v3 Key (Not Needed for Selenium)
 
 ### Create a Google Developer Account:
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
@@ -48,4 +62,4 @@ Replace the `API_KEY` variable in the code with your API key:
 1. Make sure your API key is properly set in the code.
 2. Run the Python script:
    ```bash
-   python comment_script.py
+   python src/main.py
