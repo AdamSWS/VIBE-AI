@@ -52,7 +52,7 @@ def process_csv_topics(csv_file, batch_size=5, threads=7):
         print(f"[INFO] Processing topics: {topics_to_process}")
 
         # Perform scraping for the batch
-        results = start_scraping_session(threads=threads, topics=topics_to_process)
+        results = start_scraping_session(topics=topics_to_process, thread_count=12)
 
         # Store the results and disconnect from the database
         if results:
@@ -120,30 +120,28 @@ def process_csv_topics_for_comments(csv_file, batch_size=5, threads=7):
         topics_to_process = topics[processed_index:processed_index + batch_size]
         print(f"[INFO] Processing topics for comments: {topics_to_process}")
 
-        for topic in topics_to_process:
-            # Perform comment scraping for the topic
-            results = start_comment_scrape_session(topics=[topic], thread_count=threads)
-            
-            if not results:
-                print(f"[WARNING] No comments scraped for topic '{topic}'.")
+        # Perform comment scraping for the batch of topics
+        results = start_comment_scrape_session(topics=topics_to_process, thread_count=threads)
+
+        if not results:
+            print(f"[WARNING] No comments scraped for topics: {topics_to_process}.")
+            continue
+
+        # Save comments grouped by video title
+        for video_data in results:
+            video_title = video_data.get("title", "Unknown Title")
+            comments_batch = video_data.get("comments", [])
+            if not comments_batch:
+                print(f"[DEBUG] No comments to save for video '{video_title}'.")
                 continue
             
-            # Save comments grouped by video title
-            for video_data in results:
-                video_title = video_data.get("title", "Unknown Title")
-                comments_batch = video_data.get("comments", [])
-                if not comments_batch:
-                    print(f"[DEBUG] No comments to save for video '{video_title}'.")
-                    continue
-                
-                # Save to MongoDB using save_comments_batch
-                save_comments_batch(comments_batch, video_title)
+            # Save to MongoDB using save_comments_batch
+            save_comments_batch(comments_batch, video_title)
 
         # Update and save the processed index
         processed_index += len(topics_to_process)
         save_processed_index(processed_index)
 
-        # Wait before the next batch (in loop mode)
         print("[INFO] Batch processing complete.")
 
     print("[INFO] Completed processing all topics in the CSV file.")

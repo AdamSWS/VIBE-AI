@@ -7,50 +7,13 @@ from .driver import create_driver
 from queue import Queue
 from threading import Lock
 from .stats_parser import parse_likes, parse_view_count
-from trends.google_trends import get_randomized_youtube_trending_topics
 from vpn.vpn_handler import connect_to_vpn, disconnect_vpn
 
-MAX_VIDEOS = 35
-
-def start_scraping_session(threads=7, topics=None):
-    if threads:
-        print(f"[INFO] Starting scraping session with {threads} thread(s)...")
-    else:
-        print("[INFO] Starting scraping session without multithreading...")
-
-    if not topics:
-        print("[INFO] No topics provided. Fetching trending topics...")
-        topics = get_randomized_youtube_trending_topics()
-
-    print(f"[INFO] Fetched Topics: {topics}")
-
-    all_results = []
-    connect_to_vpn()
-
-    for topic in topics:
-        print(f"[INFO] Scraping videos for topic: {topic}")
-        try:
-            topic_results = scrape_trending_videos(topic, threads)
-            all_results.extend(topic_results)
-        except Exception as e:
-            print(f"[ERROR] Failed to scrape videos for topic '{topic}': {e}")
-
-    disconnect_vpn()
-
-    if all_results:
-        try:
-            collection = get_db("trending_video_data")
-            store_items_to_collection(collection, all_results)
-            print(f"[INFO] Scraped data successfully stored in MongoDB. Total videos: {len(all_results)}")
-        except Exception as e:
-            print(f"[ERROR] Failed to store data in MongoDB: {e}")
-    else:
-        print("[WARNING] No results to store.")
-
-    return all_results
+MAX_VIDEOS = 50
 
 
 def scrape_video_details(video_url):
+    """Scrape detailed information for a given video URL."""
     print(f"[INFO] Scraping video details for: {video_url}")
 
     driver = create_driver()
@@ -86,7 +49,7 @@ def scrape_video_details(video_url):
         except Exception as e:
             print(f"[ERROR] Could not click 'More' button: {e}")
 
-        # Scrape tags from meta keywords
+        # Scrape tags
         try:
             tags = driver.execute_script(
                 "return document.querySelector('meta[name=\"keywords\"]').getAttribute('content');"
@@ -95,14 +58,14 @@ def scrape_video_details(video_url):
         except Exception:
             tags = []
 
+        # Scrape upload date
         try:
-            # Assuming the upload date is the first bold formatted-string span
             upload_date = driver.find_element(By.XPATH, '//span[@class="style-scope yt-formatted-string bold"][3]').text
         except Exception:
             upload_date = "Unknown"
 
+        # Scrape view count
         try:
-            # Get the view count from the 'div#view-count' container
             view_count = driver.find_element(By.XPATH, '//span[@class="style-scope yt-formatted-string bold"][1]').text
         except Exception as e:
             print(f"[ERROR] Failed to fetch view count: {e}")
@@ -112,8 +75,8 @@ def scrape_video_details(video_url):
         try:
             likes = driver.find_element(By.XPATH, '//*[@id="top-level-buttons-computed"]/segmented-like-dislike-button-view-model/yt-smartimation/div/div/like-button-view-model/toggle-button-view-model/button-view-model/button/div[2]').text
         except Exception:
-            likes = "No description available"
-        
+            likes = "Unknown"
+
         return {
             "title": title,
             "description": description,
@@ -128,10 +91,49 @@ def scrape_video_details(video_url):
     finally:
         driver.quit()
 
+
+def scrape_videos_for_topic(topic):
+    """Scrape video URLs for a single topic."""
+    print(f"[INFO] Scraping video URLs for topic: {topic}")
+    driver = create_driver()
+
+    if not driver:
+        print("[ERROR] WebDriver could not be created. Exiting.")
+        return []
+
+    try:
+        search_url = f"https://www.youtube.com/results?search_query={'+'.join(topic.split())}"
+        driver.get(search_url)
+
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, '//ytd-video-renderer'))
+        )
+
+        videos = driver.find_elements(By.XPATH, '//ytd-video-renderer')[:MAX_VIDEOS]
+        video_urls = []
+        for video in videos:
+            try:
+                video_url = video.find_element(By.XPATH, './/a[@id="video-title"]').get_attribute("href")
+                if video_url and "/shorts/" not in video_url:
+                    video_urls.append(video_url)
+            except Exception as e:
+                print(f"[ERROR] Failed to extract video URL: {e}")
+
+        print(f"[INFO] Found {len(video_urls)} videos for topic: {topic}")
+        return video_urls
+
+    except Exception as e:
+        print(f"[ERROR] Failed to scrape video URLs for topic '{topic}': {e}")
+        return []
+    finally:
+        driver.quit()
+
+
 def worker(queue, results, lock):
+    """Worker function to scrape video details."""
     while not queue.empty():
         video_url = queue.get()
-        if video_url is None:  # Exit condition
+        if video_url is None:
             break
 
         video_data = scrape_video_details(video_url)
@@ -141,73 +143,63 @@ def worker(queue, results, lock):
 
         queue.task_done()
 
-def scrape_trending_videos(topic, thread_count=10):
-    print(f"[INFO] Starting YouTube video scraper for topic: {topic}")
-    driver = create_driver()
 
-    if not driver:
-        print("[ERROR] WebDriver could not be created. Exiting.")
-        return []
+def start_scraping_session(topics, thread_count=20):
+    """Scrape videos for all topics and process them concurrently."""
+    print("[INFO] Starting scraping session...")
+    connect_to_vpn()
 
-    try:
-        # Navigate to the YouTube search page for the topic
-        search_url = f"https://www.youtube.com/results?search_query={'+'.join(topic.split())}"
-        driver.get(search_url)
+    # Step 1: Scrape video URLs for all topics concurrently
+    all_video_urls = []
+    with ThreadPoolExecutor(max_workers=thread_count) as executor:
+        topic_futures = {executor.submit(scrape_videos_for_topic, topic): topic for topic in topics}
 
-        # Wait for video elements to load
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, '//ytd-video-renderer'))
-        )
-
-        videos = driver.find_elements(By.XPATH, '//ytd-video-renderer')[:MAX_VIDEOS]
-        print(f"[INFO] Found {len(videos)} videos for topic '{topic}'.")
-
-        # Extract video URLs
-        video_urls = []
-        for video in videos:
+        for future in topic_futures:
             try:
-                video_url = video.find_element(By.XPATH, './/a[@id="video-title"]').get_attribute("href")
-                if "/shorts/" not in video_url:
-                    video_urls.append(video_url)
+                urls = future.result()
+                all_video_urls.extend(urls)
             except Exception as e:
-                print(f"[ERROR] Failed to extract video URL: {e}")
+                print(f"[ERROR] Error while scraping topic: {topic_futures[future]} - {e}")
 
-        # Prepare threading components
-        video_queue = Queue()
-        results = []
-        lock = Lock()
+    print(f"[INFO] Total video URLs scraped: {len(all_video_urls)}")
 
-        # Add video URLs to the queue
-        for url in video_urls:
-            video_queue.put(url)
+    # Step 2: Process video URLs concurrently
+    video_queue = Queue()
+    results = []
+    lock = Lock()
 
-        print(f"[INFO] Queue initialized with {len(video_urls)} videos.")
+    for url in all_video_urls:
+        video_queue.put(url)
 
-        # Create and start threads
-        with ThreadPoolExecutor(max_workers=thread_count) as executor:
-            for _ in range(thread_count):
-                executor.submit(worker, video_queue, results, lock)
+    with ThreadPoolExecutor(max_workers=thread_count) as executor:
+        for _ in range(thread_count):
+            executor.submit(worker, video_queue, results, lock)
 
-        # Wait for all tasks to complete
-        video_queue.join()
+    video_queue.join()
+    disconnect_vpn()
 
-        print(f"[INFO] Scraping completed for topic: {topic}. Total videos scraped: {len(results)}")
-        return results
-
+    # Step 3: Save results to the database
+    try:
+        collection = get_db("trending_video_data")
+        store_items_to_collection(collection, results)
+        print(f"[INFO] Stored {len(results)} videos in the database.")
     except Exception as e:
-        print(f"[ERROR] Failed to scrape videos for topic '{topic}': {e}")
-        return []
-    finally:
-        driver.quit()
+        print(f"[ERROR] Failed to store data in the database: {e}")
+
+    return results
+
 
 if __name__ == "__main__":
-    topics = ["Minimalist Art", "Independent Films", "Urban Street Art", "Theatre Acting Techniques", "Jazz Improvisation"]
-    all_results = []
-    for topic in topics:
-        try: 
-            topic_results = scrape_trending_videos(topic, 1)
-            all_results.extend(topic_results)
-        except Exception as e:
-            print(f"[ERROR] Failed to scrape videos for topic '{topic}': {e}")
-        finally:
-            print(all_results)
+    topics = [
+        'How to Convert PDF to Word #shorts',
+        'Three EASY Ways to Find and Remove Duplicates in Excel',
+        'How to Get a UNIQUE List from Many Columns Using FLATTEN in Google Sheets',
+        'Microsoft Office Gets a NEW LOOK #shorts',
+        'How to Use Excel Checkboxes | Interactive Checklists & Reports',
+        '10 USEFUL Websites You Wish You Knew Earlier!',
+        'Get Windows 11! How to Download & Install + Compatibility Check #shorts',
+        'How to ACE Excel Interview Questions (Based on YOUR feedback & by Position)',
+        "Top Features of EDGE! (You've GOT to KNOW these!)",
+        'How to Translate Languages With Google Sheets #shorts'
+    ]
+    start_scraping_session(topics, thread_count=20)

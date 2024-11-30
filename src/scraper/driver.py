@@ -7,7 +7,7 @@ import subprocess
 def create_driver():
     try:
         options = Options()
-        # options.add_argument("--headless=new")
+        options.add_argument("--headless=new")
         options.add_argument("--incognito")
         options.add_argument("--disable-web-security")
         options.add_argument("--disable-extensions")

@@ -1,7 +1,7 @@
 import subprocess
 import time
 
-VPN_WAIT_TIME = 1
+VPN_WAIT_TIME = 0.2
 vpn_connected = False
 
 def connect_to_vpn():
