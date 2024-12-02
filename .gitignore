@@ -4,3 +4,5 @@ __pycache__
 trending_US_7d_20241125-1756.csv
 chromedriver
 processed_topics_index.json
+.DS_Store
+.DS_Store
